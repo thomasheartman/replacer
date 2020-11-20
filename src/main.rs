@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::{collections::HashMap, fmt};
 use std::{
     ffi::OsStr,
-    fs::{File, OpenOptions},
+    fs::{DirBuilder, File, OpenOptions},
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
@@ -28,7 +28,7 @@ struct Opt {
 
 #[derive(Debug, Deserialize)]
 struct Config {
-    output_dir: String,
+    output_dir: PathBuf,
 }
 
 #[derive(Debug)]
@@ -37,6 +37,7 @@ enum ProgramError {
     ReadFailed(PathBuf),
     MissingKey(String),
     CannotOpenFileForWriting(PathBuf),
+    CannotCreateOutputDirectories(PathBuf),
 }
 
 impl fmt::Display for ProgramError {
@@ -53,6 +54,9 @@ impl fmt::Display for ProgramError {
             }
             ProgramError::CannotOpenFileForWriting(path) => {
                 write!(f, "Couldn't open output file {:?}.", path)
+            }
+            ProgramError::CannotCreateOutputDirectories(path) => {
+                write!(f, "Failed to create directory {:?}", path)
             }
         }
     }
@@ -89,19 +93,25 @@ fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
     let output = Path::new(&conf.output_dir).join(&filename);
 
     info!(
-        "Creating file {:?} using {:?} as a template and {:?} as replacements file.",
+        "Creating file {:?} using {:?} as a template and {:?} as a replacements file.",
         &output, &opts.input_file, &opts.replacements_file,
     );
 
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(true);
 
-    // replace content
+    info!("Creating necessary directories.");
+    DirBuilder::new()
+        .recursive(true)
+        .create(&conf.output_dir)
+        .map_err(|_| ProgramError::CannotCreateOutputDirectories(conf.output_dir))?;
+
     handlebars
         .render_template_source_to_write(
             &mut input,
             &replacements,
             OpenOptions::new()
+                .create(true)
                 .write(true)
                 .open(&output)
                 .map_err(|_| ProgramError::CannotOpenFileForWriting(output.clone()))?,
