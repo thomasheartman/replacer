@@ -1,10 +1,11 @@
 use handlebars::Handlebars;
-use log::{debug, info};
+use log::{debug, error, info};
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 use std::{
     fs::{File, OpenOptions},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 
@@ -29,33 +30,91 @@ struct Config {
     output_dir: String,
 }
 
-fn main() -> anyhow::Result<()> {
+#[derive(Debug)]
+enum ProgramError {
+    FileNotFound(PathBuf),
+    ReadFailed(PathBuf),
+    MissingKey(String),
+    CannotOpenFileForWriting(PathBuf),
+}
+
+impl fmt::Display for ProgramError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ProgramError::FileNotFound(path) => write!(f, "Couldn't find the file '{:?}'", path),
+            ProgramError::ReadFailed(path) => write!(
+                f,
+                "Couldn't deserialize '{:?}' into the expected format.",
+                path
+            ),
+            ProgramError::MissingKey(key) => {
+                write!(f, "The key '{}' does not have a replacement.", key)
+            }
+            ProgramError::CannotOpenFileForWriting(path) => {
+                write!(f, "Couldn't open output file '{:?}'", path)
+            }
+        }
+    }
+}
+
+fn open_file(path: &PathBuf) -> Result<File, ProgramError> {
+    File::open(path).map_err(|_| ProgramError::FileNotFound(path.clone()))
+}
+
+fn deserialize<T>(path: &PathBuf) -> Result<T, ProgramError>
+where
+    T: DeserializeOwned,
+{
+    open_file(path).and_then(|f| {
+        serde_yaml::from_reader::<_, T>(f).map_err(|_| ProgramError::ReadFailed(path.clone()))
+    })
+}
+
+fn go(opts: &Opt) -> Result<(), ProgramError> {
+    let mut input = open_file(&opts.input_file)?;
+    let filename = opts.input_file.as_path().file_name().unwrap();
+
+    let replacements: HashMap<String, String> = deserialize(&opts.replacements_file)?;
+
+    let conf: Config = deserialize(&opts.config_file)?;
+
+    let output = Path::new(&conf.output_dir).join(&filename);
+
+    info!(
+        "Creating file {:?} using {:?} as a template and {:?} as replacements file.",
+        &output, &opts.input_file, &opts.replacements_file,
+    );
+
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(true);
+
+    // replace content
+    handlebars
+        .render_template_source_to_write(
+            &mut input,
+            &replacements,
+            OpenOptions::new()
+                .write(true)
+                .open(output.clone())
+                .map_err(|_| ProgramError::CannotOpenFileForWriting(output))?,
+        )
+        .map_err(|_| ProgramError::MissingKey("nope".to_owned()))?;
+
+    Ok(())
+}
+
+fn main() -> Result<(), ProgramError> {
     env_logger::init();
     // read input
     let opt = Opt::from_args();
     debug!("Got these options: {:#?}", opt);
 
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(true);
+    let result = go(&opt);
 
-    let mut input = File::open(&opt.input_file)?;
-
-    let replacements: HashMap<String, String> = File::open(&opt.replacements_file)
-        .map(serde_yaml::from_reader::<_, HashMap<String, String>>)??;
-
-    let conf = File::open(opt.config_file).map(serde_yaml::from_reader::<_, Config>)??;
-
-    info!(
-        "Creating file {:?} using {:?} as a template and {:?} as replacements file.",
-        &conf.output_dir, &opt.input_file, &opt.replacements_file,
-    );
-
-    // replace content
-    let output = handlebars.render_template_source_to_write(
-        &mut input,
-        &replacements,
-        OpenOptions::new().write(true).open(conf.output_dir)?,
-    )?;
+    match result {
+        Ok(_) => {}
+        Err(e) => error!("Encountered an error during execution: {}", e),
+    }
 
     // write
 
