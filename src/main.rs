@@ -103,15 +103,15 @@ fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
             &replacements,
             OpenOptions::new()
                 .write(true)
-                .open(output.clone())
-                .map_err(|_| ProgramError::CannotOpenFileForWriting(output))?,
+                .open(&output)
+                .map_err(|_| ProgramError::CannotOpenFileForWriting(output.clone()))?,
         )
         .map_err(|_| ProgramError::MissingKey("nope".to_owned()))?;
 
-    Ok(())
+    Ok(output)
 }
 
-fn main() -> Result<(), ProgramError> {
+fn main() -> Result<(), ()> {
     env_logger::init();
     // read input
     let opt = Opt::from_args();
@@ -120,12 +120,13 @@ fn main() -> Result<(), ProgramError> {
     let result = go(&opt);
 
     match result {
-        Ok(_) => {}
-        Err(e) => error!("Encountered an error during execution: {}", e),
+        Ok(path) => {
+            info!("Successfully wrote file {:?}", path);
+            Ok(())
+        }
+        Err(e) => {
+            error!("Encountered an error during execution: {}", e);
+            Err(())
+        }
     }
-
-    // write
-
-    println!("Hello, world!");
-    Ok(())
 }
