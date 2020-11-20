@@ -41,17 +41,17 @@ enum ProgramError {
 impl fmt::Display for ProgramError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProgramError::FileNotFound(path) => write!(f, "Couldn't find the file '{:?}'", path),
+            ProgramError::FileNotFound(path) => write!(f, "Couldn't find the file {:?}.", path),
             ProgramError::ReadFailed(path) => write!(
                 f,
-                "Couldn't deserialize '{:?}' into the expected format.",
+                "Couldn't deserialize {:?} into the expected format.",
                 path
             ),
             ProgramError::MissingKey(key) => {
                 write!(f, "The key '{}' does not have a replacement.", key)
             }
             ProgramError::CannotOpenFileForWriting(path) => {
-                write!(f, "Couldn't open output file '{:?}'", path)
+                write!(f, "Couldn't open output file {:?}.", path)
             }
         }
     }
