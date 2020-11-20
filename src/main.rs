@@ -1,9 +1,10 @@
 use handlebars::Handlebars;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::{collections::HashMap, fmt};
 use std::{
+    ffi::OsStr,
     fs::{File, OpenOptions},
     path::{Path, PathBuf},
 };
@@ -70,9 +71,16 @@ where
     })
 }
 
-fn go(opts: &Opt) -> Result<(), ProgramError> {
+fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
     let mut input = open_file(&opts.input_file)?;
-    let filename = opts.input_file.as_path().file_name().unwrap();
+    let filename = opts.input_file.as_path().file_name().unwrap_or_else(|| {
+        let default_name = "output";
+        warn!(
+            "Unable to generate an output filename based on the the input file; using {} instead.",
+            &default_name
+        );
+        OsStr::new(default_name)
+    });
 
     let replacements: HashMap<String, String> = deserialize(&opts.replacements_file)?;
 
