@@ -1,4 +1,4 @@
-use handlebars::Handlebars;
+use handlebars::{Handlebars, TemplateRenderError};
 use log::{debug, error, info, warn};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -35,30 +35,32 @@ struct Config {
 enum ProgramError {
     FileNotFound(PathBuf),
     ReadFailed(PathBuf),
-    MissingKey(String),
+    RenderError(String),
     CannotOpenFileForWriting(PathBuf),
     CannotCreateOutputDirectories(PathBuf),
 }
 
 impl fmt::Display for ProgramError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProgramError::FileNotFound(path) => write!(f, "Couldn't find the file {:?}.", path),
-            ProgramError::ReadFailed(path) => write!(
-                f,
-                "Couldn't deserialize {:?} into the expected format.",
-                path
-            ),
-            ProgramError::MissingKey(key) => {
-                write!(f, "The key '{}' does not have a replacement.", key)
+        let msg = match self {
+            ProgramError::FileNotFound(path) => format!("Couldn't find the file {:?}.", path),
+            ProgramError::ReadFailed(path) => {
+                format!("Couldn't deserialize {:?} into the expected format.", path)
+            }
+            ProgramError::RenderError(description) => {
+                format!(
+                    "Render error: {} This is likely due to a missing key in the replacements file.",
+                    description
+                )
             }
             ProgramError::CannotOpenFileForWriting(path) => {
-                write!(f, "Couldn't open output file {:?}.", path)
+                format!("Couldn't open output file {:?}.", path)
             }
             ProgramError::CannotCreateOutputDirectories(path) => {
-                write!(f, "Failed to create directory {:?}", path)
+                format!("Failed to create directory {:?}", path)
             }
-        }
+        };
+        write!(f, "{}", msg)
     }
 }
 
@@ -116,7 +118,16 @@ fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
                 .open(&output)
                 .map_err(|_| ProgramError::CannotOpenFileForWriting(output.clone()))?,
         )
-        .map_err(|_| ProgramError::MissingKey("nope".to_owned()))?;
+        .map_err(|e| {
+            let s = match e {
+                TemplateRenderError::RenderError(re) => re.desc,
+                TemplateRenderError::TemplateError(_) => {
+                    String::from("There was an error with the template.")
+                }
+                TemplateRenderError::IOError(_, _) => String::from("Unable to write output file."),
+            };
+            ProgramError::RenderError(s)
+        })?;
 
     Ok(output)
 }
