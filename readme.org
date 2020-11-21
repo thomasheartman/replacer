@@ -2,24 +2,61 @@
 
 * Replacer
 
-  This is the readme.
+  This is a simple command line app that renders [[https://handlebarsjs.com/][Handlebars]] templates
+  based on a provided key mapping.
 
-  Fill me in later.
+  It uses the [[https://docs.rs/structopt/0.3.16/structopt/][structopt]], [[https://docs.rs/handlebars/3.5.1/handlebars/struct.Handlebars.html][Handlebars]], and [[https://serde.rs/][serde]] crates to do most of
+  the heavy lifting.
 
 * Usage
 
-** Flags
+  #+BEGIN_SRC shell
+    $ replacer -f <template> -i <mappings> -c <config>
+  #+END_SRC
+
+  The application requires an input template, a mapping file, and a configuration file
+  to function properly.
+
+** Options
 
 ** Config files
 
+** Log levels
+
 ** Template format
+
+*** Missing keys and unfinished templates
+
+    The handlebars renderer is set to run in strict mode. This means
+    that if there's a key that appears in the template that doesn't
+    have an appropriate mapping, then the program will exit and let
+    you know what key is missing.
+
+    Further, if there are unfinished handlebars expressions in the
+    input template, then the program cannot process the template and
+    will exit. In other words:
+
+    In a template, ~{{expression}}~ is just fine.
+
+    However, if an expression doesn't close, such as ~{{this}~ or
+    ~{{that~, then the template is invalid and cannot be processed.
 
 * Build
 
-** Install Rust
+  To build the project, first [[https://www.rust-lang.org/tools/install][install Rust]]. If you use [[https://nixos.org/][Nix]], there is
+  already a ~shell.nix~ file in this directory, so starting a
+  ~nix-shell~ should give you all the tools you need.
 
-** ~cargo build~
+  Next, run ~cargo build~ and let the compiler do what it does. You'll
+  find the generated binary in the ~target~ directory. Alternatively,
+  to install this program directly into your Cargo path, you can run
+  ~cargo install --path .~. Assuming the Cargo binary directory
+  (usually ~/usr/local/cargo/bin~) is in your path, you should now be
+  able to run the program directly by typing ~requester~ on the
+  command line.
 
 * Future improvements
 
-**
+** Allow missing keys
+
+** Verbosity flags
