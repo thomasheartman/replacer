@@ -1,0 +1,25 @@
+
+
+* Replacer
+
+  This is the readme.
+
+  Fill me in later.
+
+* Usage
+
+** Flags
+
+** Config files
+
+** Template format
+
+* Build
+
+** Install Rust
+
+** ~cargo build~
+
+* Future improvements
+
+**
