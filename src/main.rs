@@ -15,7 +15,7 @@ use writer::{render, Configuration, ProgramError};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "replacer")]
-struct Opt {
+struct Opts {
     // A file containing a templated text using the Handlebars format
     #[structopt(short = "f", long = "file", parse(from_os_str))]
     input_file: PathBuf,
@@ -47,7 +47,7 @@ where
     })
 }
 
-fn parse_input_files(opts: &Opt) -> Result<Configuration, ProgramError> {
+fn parse_input_files(opts: &Opts) -> Result<Configuration, ProgramError> {
     let template = open_file(&opts.input_file)?;
     let mappings: HashMap<String, String> = deserialize(&opts.replacements_file)?;
     let config: Config = deserialize(&opts.config_file)?;
@@ -78,9 +78,9 @@ fn main() -> Result<(), ()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     // read input
-    let opt = Opt::from_args();
+    let opts = Opts::from_args();
 
-    let result = parse_input_files(&opt).and_then(render);
+    let result = parse_input_files(&opts).and_then(render);
 
     match result {
         Ok(path) => {
