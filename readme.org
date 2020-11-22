@@ -15,17 +15,35 @@
   #+END_SRC
 
   The application requires an input template, a mapping file, and a configuration file
-  to function properly.
+  to function properly. The accepted command line options are:
 
-** Options
+  | short form | long form     | description                                                                             |
+  |------------+---------------+-----------------------------------------------------------------------------------------|
+  | -f         | --file        | A file containing the template, in [[https://handlebarsjs.com/][Handlebars]] format.                                   |
+  | -i         |               | A YAML file containing the mappings to use with the provided template.                  |
+  | -c         | --config-file | A YAML file containing extra configuration for the app, including where to put results. |
 
-** Config files
-
-** Log levels
+  If successful, the resulting file can be found in the directory
+  specified in the configuration file. It will have the same name as
+  the input template. With template file ~my-template~ and output
+  directory set to ~output~, the resulting file will be
+  ~output/my-template~.
 
 ** Template format
 
-*** Missing keys and unfinished templates
+
+   The program renders simplified Handlebars templates into processed
+   files. The basic use of the template format is simple: any key
+   enclosed in a set of double curly braces will get replaced with the
+   corresponding mapping. Keys must not contain spaces. ~{{this}}~ is
+   a valid key, but ~{{this other one}}~ is NOT. Instead, try using
+   hyphens, underscores, or your preferred capitalization scheme.
+
+   The program currently only supports replacing keys with simple
+   strings and does not support lists or nested objects. As such, the
+   [[https://handlebarsjs.com/guide/#evaluation-context][Handlebars evaluation context]] is not very useful in this case.
+
+*** On missing keys and unfinished templates
 
     The handlebars renderer is set to run in strict mode. This means
     that if there's a key that appears in the template that doesn't
@@ -40,6 +58,59 @@
 
     However, if an expression doesn't close, such as ~{{this}~ or
     ~{{that~, then the template is invalid and cannot be processed.
+
+** Config files
+
+   The program needs two YAML files to run: the mapping file
+   and the program configuration files.
+
+*** The mapping file
+
+    The mapping file is a regular YAML file where the top level keys
+    are interpreted as the keys to be replaced, and their property
+    values are the replacement.
+
+    In other words, given this template:
+
+    #+begin_example
+      Hello, {{name}}!
+    #+end_example
+
+    And this mapping file:
+
+    #+BEGIN_SRC yaml
+      name: world
+    #+END_SRC
+
+    You'd get an output that looks like this:
+
+    #+begin_example
+      Hello, world!
+    #+end_example
+
+    You can also use multi-line strings for mappings and they will get
+    written out over multiple lines.
+
+*** The configuration file
+
+    The configuration file is a YAML file with a set of predefined
+    configuration options that must be set.
+
+    The current config file schema is:
+
+    #+BEGIN_SRC yaml
+      output_dir: <path to the directory you want the results in>
+    #+END_SRC
+
+    The ~output_dir~ property value can be any valid path. If the
+    directory does not already exist, the application will attempt to
+    create it (along with any intermediary directories). The output
+    file will be placed in this directory.
+
+** Log levels
+
+   To enable more verbose output from the application, you can set the
+   ~RUST_LOG~ environment variable.
 
 * Build
 
@@ -60,3 +131,9 @@
 ** Allow missing keys
 
 ** Verbosity flags
+
+** Allow other formats for config and mapping
+
+** Get output file from ~-o~ option
+
+** Support for nested objects and lists
