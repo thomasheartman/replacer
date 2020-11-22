@@ -20,11 +20,11 @@ struct Opts {
     #[structopt(short = "f", long = "file", parse(from_os_str))]
     input_file: PathBuf,
 
-    // A map of values to be replaced and their replacements in YAML
+    // A YAML file containing of key value pairs to be replaced.
     #[structopt(short = "i", parse(from_os_str))]
     replacements_file: PathBuf,
 
-    // A configuration file, YAML
+    // A YAML file containing program configuration.
     #[structopt(short = "c", long = "config-file", parse(from_os_str))]
     config_file: PathBuf,
 }
