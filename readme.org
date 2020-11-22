@@ -109,8 +109,17 @@
 
 ** Log levels
 
-   To enable more verbose output from the application, you can set the
-   ~RUST_LOG~ environment variable.
+   By default, the application logs all logs starting at information
+   level. If you want to see fewer (or more) logs, you can set the
+   ~RUST_LOG~ environment variable. The most common options are (in the order
+   most verbose to least verbose):
+     - ~debug~
+     - ~info~
+     - ~warn~
+     - ~error~
+
+   See [[https://docs.rs/env_logger/0.8.2/env_logger/#enabling-logging][the section on enabling logging]] from the [[https://docs.rs/env_logger/0.8.2][~env_logger~ crate
+   docs]] for more information.
 
 * Build
 
