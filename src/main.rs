@@ -77,7 +77,6 @@ fn parse_input_files(opts: &Opts) -> Result<Configuration, ProgramError> {
 fn main() -> Result<(), ()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    // read input
     let opts = Opts::from_args();
 
     let result = parse_input_files(&opts).and_then(render);
