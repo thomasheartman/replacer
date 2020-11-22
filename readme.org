@@ -163,3 +163,12 @@
     for nested objects, lists, and more goodies that this program
     doesn't support at the moment. We could lean harder into using
     Handlebars and support these more advanced use cases as well.
+
+  - Support for not overwriting existing files :: The current
+    implementation of the program will happily overwrite existing
+    files if the output file already exists. Giving the user the
+    option of whether files should overwrite or not could be useful.
+
+* Time spent
+
+  Roughly 10 hours or so.
