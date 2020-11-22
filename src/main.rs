@@ -1,3 +1,4 @@
+use env_logger::Env;
 use handlebars::{Handlebars, TemplateRenderError};
 use log::{debug, error, info, warn};
 use serde::de::DeserializeOwned;
@@ -133,7 +134,8 @@ fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
 }
 
 fn main() -> Result<(), ()> {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
     // read input
     let opt = Opt::from_args();
     debug!("Got these options: {:#?}", opt);
