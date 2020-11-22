@@ -1,5 +1,5 @@
 use env_logger::Env;
-use handlebars::{Handlebars, TemplateRenderError};
+use handlebars::{Handlebars, TemplateFileError};
 use log::{debug, error, info, warn};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -39,7 +39,7 @@ enum ProgramError {
     ReadFailed(PathBuf),
     RenderError(String),
     MissingKey(String),
-    InvalidTemplate,
+    InvalidTemplate(String),
     CannotOpenFileForWriting(PathBuf),
     CannotCreateOutputDirectories(PathBuf),
 }
@@ -61,8 +61,11 @@ impl fmt::Display for ProgramError {
                 format!("Failed to create directory {:?}", path)
             }
             ProgramError::MissingKey(msg) => msg.clone(),
-            ProgramError::InvalidTemplate => {
-                "The provided template file is invalid and cannot be parsed correctly.".to_string()
+            ProgramError::InvalidTemplate(reason) => {
+                format!(
+                    "The provided template file is invalid and cannot be parsed correctly: {}",
+                    reason
+                )
             }
         };
         write!(f, "{}", msg)
@@ -83,40 +86,13 @@ where
 }
 
 fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
-    let mut input = open_file(&opts.input_file)?;
-    let filename = opts.input_file.as_path().file_name().unwrap_or_else(|| {
-        let default_name = "output";
-        warn!(
-            "Unable to generate an output filename based on the the input file; using {} instead.",
-            &default_name
-        );
-        OsStr::new(default_name)
-    });
-
-    let replacements: HashMap<String, String> = deserialize(&opts.replacements_file)?;
-
-    let conf: Config = deserialize(&opts.config_file)?;
-
-    let output = Path::new(&conf.output_dir).join(&filename);
-
-    info!(
-        "Creating file {:?} using {:?} as a template and {:?} as a replacements file.",
-        &output, &opts.input_file, &opts.replacements_file,
-    );
-
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(true);
-
-    handlebars.register_template_source("input", &mut input);
-    let template_render_result = handlebars.render("input", &replacements);
-
     struct Configuration {
         template: File,
         mappings: HashMap<String, String>,
         output_file: PathBuf,
     }
     fn parse_input_files(opts: &Opt) -> Result<Configuration, ProgramError> {
-        let mut template = open_file(&opts.input_file)?;
+        let template = open_file(&opts.input_file)?;
         let mappings: HashMap<String, String> = deserialize(&opts.replacements_file)?;
         let config: Config = deserialize(&opts.config_file)?;
         let filename = opts.input_file.as_path().file_name().unwrap_or_else(|| {
@@ -129,6 +105,11 @@ fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
         });
 
         let output_file = Path::new(&config.output_dir.join(&filename)).to_path_buf();
+
+        info!(
+            "Creating file {:?} using {:?} as a template and {:?} as a replacements file.",
+            &output_file, &opts.input_file, &opts.replacements_file,
+        );
 
         Ok(Configuration {
             template,
@@ -145,14 +126,23 @@ fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
 
-        handlebars.register_template_source("input", &mut config.template);
+        handlebars
+            .register_template_source("input", &mut config.template)
+            .map_err(|e| match e {
+                TemplateFileError::TemplateError(err) => {
+                    ProgramError::InvalidTemplate(err.reason.to_string())
+                }
+                TemplateFileError::IOError(_, _) => {
+                    ProgramError::RenderError(String::from("I/O Error when rendering template."))
+                }
+            })?;
         handlebars
             .render("input", &config.mappings)
             .map_err(|e| {
                 if e.desc.starts_with("Variable") {
                     ProgramError::MissingKey(e.desc)
                 } else if e.desc.starts_with("Template not found") {
-                    ProgramError::InvalidTemplate
+                    ProgramError::InvalidTemplate("Couldn't recognize template.".to_string())
                 } else {
                     ProgramError::RenderError(e.desc)
                 }
@@ -189,39 +179,9 @@ fn go(opts: &Opt) -> Result<PathBuf, ProgramError> {
 
         Ok(output_file)
     }
-
-    // parse_input_files(&opts)
-    //     .and_then(render_template(&mut input))
-    //     .and_then(write_template_file)?;
-
-    info!("Creating necessary directories.");
-    DirBuilder::new()
-        .recursive(true)
-        .create(&conf.output_dir)
-        .map_err(|_| ProgramError::CannotCreateOutputDirectories(conf.output_dir))?;
-
-    handlebars
-        .render_template_source_to_write(
-            &mut input,
-            &replacements,
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&output)
-                .map_err(|_| ProgramError::CannotOpenFileForWriting(output.clone()))?,
-        )
-        .map_err(|e| {
-            let s = match e {
-                TemplateRenderError::RenderError(re) => re.desc,
-                TemplateRenderError::TemplateError(_) => {
-                    String::from("There was an error with the template.")
-                }
-                TemplateRenderError::IOError(_, _) => String::from("Unable to write output file."),
-            };
-            ProgramError::RenderError(s)
-        })?;
-
-    Ok(output)
+    parse_input_files(opts)
+        .and_then(render_template)
+        .and_then(write_template_file)
 }
 
 fn main() -> Result<(), ()> {
