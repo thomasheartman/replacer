@@ -17,11 +17,11 @@
   The application requires an input template, a mapping file, and a configuration file
   to function properly. The accepted command line options are:
 
-  | short form | long form     | description                                                                             |
-  |------------+---------------+-----------------------------------------------------------------------------------------|
-  | -f         | --file        | A file containing the template, in [[https://handlebarsjs.com/][Handlebars]] format.                                   |
-  | -i         |               | A YAML file containing the mappings to use with the provided template.                  |
-  | -c         | --config-file | A YAML file containing extra configuration for the app, including where to put results. |
+  | short form | long form       | description                                                                             |
+  |------------+-----------------+-----------------------------------------------------------------------------------------|
+  | ~-f~       | ~--file~        | A file containing the template, in [[https://handlebarsjs.com/][Handlebars]] format.                                   |
+  | ~-i~       |                 | A YAML file containing the mappings to use with the provided template.                  |
+  | ~-c~       | ~--config-file~ | A YAML file containing extra configuration for the app, including where to put results. |
 
   If successful, the resulting file can be found in the directory
   specified in the configuration file. It will have the same name as
