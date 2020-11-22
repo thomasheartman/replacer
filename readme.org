@@ -137,12 +137,29 @@
 
 * Future improvements
 
-** Allow missing keys
+  There are a number of potential improvements that can be made to the
+  application. Here are a few suggestions:
 
-** Verbosity flags
+  - Allow missing keys in templates :: The Handlebars renderer is
+    configured to use strict mode at the moment. When not in strict
+    mode, missing keys will simply be replaced with an empty string.
+    This may be desirable in some cases, so allowing the user to set
+    this via a flag (or config file option) could be good.
 
-** Allow other formats for config and mapping
+  - Verbosity flags :: Allow the user to control logging verbosity by
+    a verbosity flag (~-v~, for instance). Conversely, a ~-q~ for
+    /quiet mode/ with no console output.
 
-** Get output file from ~-o~ option
+  - Allow other formats for config and mapping :: YAML is fine, but we
+    could also allow JSON, TOML, init files, etc.
 
-** Support for nested objects and lists
+  - Get output file from ~-o~ option :: Instead of using the config
+    file to specify the output directory and taking the name of the
+    output file from the input file, we could let the user provide a
+    ~-o~ flag that allowed them to specify the output, e.g. ~replacer
+    -f input -i map -o mapped-file.txt~.
+
+  - Support for nested objects and lists :: The Handlebars spec allows
+    for nested objects, lists, and more goodies that this program
+    doesn't support at the moment. We could lean harder into using
+    Handlebars and support these more advanced use cases as well.
