@@ -22,7 +22,7 @@ struct Opt {
     replacements_file: PathBuf,
 
     // A configuration file, YAML
-    #[structopt(short = "c", long = "configuration", parse(from_os_str))]
+    #[structopt(short = "c", long = "config-file", parse(from_os_str))]
     config_file: PathBuf,
 }
 
